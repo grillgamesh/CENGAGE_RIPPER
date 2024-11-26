@@ -13,7 +13,6 @@ from bs4 import BeautifulSoup
 import py2web
 global counter
 # Setup Tesseract OCR path if necessary
-pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'  # Adjust based on your installation
 
 # Setup the Firefox WebDriver
 options = webdriver.FirefoxOptions()
