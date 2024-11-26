@@ -11,8 +11,11 @@ import os
 from ebooklib import epub
 from bs4 import BeautifulSoup
 import py2web
-global counter
+from py2web import save_html
 
+global counter
+global pageNum 
+pageNum = 0
 # Setup the Firefox WebDriver
 options = webdriver.FirefoxOptions()
 options.headless = False  # Set to True if you want the browser to run in headless mode (without UI)
@@ -26,6 +29,7 @@ counter = 1
 
 def collect_page_content():
     """ Collect the content of all open tabs as HTML """
+    global counter  # Declare counter as global to avoid UnboundLocalError
     all_html = ""
     for handle in driver.window_handles:
         driver.switch_to.window(handle)
@@ -33,8 +37,9 @@ def collect_page_content():
         all_html += f"<div class='tab-content' id='tab-{counter}'>\n"
         all_html += html_content
         all_html += "\n</div>\n"
-        counter += 1
+        counter += 1  # Increment counter for each new tab
     return all_html
+
 
 def find_center_frame():
     """ Find the iframe streaming from the specific URL """
@@ -59,6 +64,7 @@ def open_iframe_in_new_tab(iframe):
     driver.execute_script(f"window.open('{iframe_src}');")
 
 def process_page():
+    global counter
     # Wait for the frame to load before finding it
     WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.TAG_NAME, "iframe")))
 
@@ -80,6 +86,7 @@ def process_page():
 
     # Close the tab with the frame
     driver.close()
+    print("Next Page!")
 
     # Switch back to the main window
     driver.switch_to.window(driver.window_handles[0])
@@ -89,11 +96,12 @@ def check_next_page():
     """ Check if the "next page" button exists and is clickable """
     try:
         next_button = WebDriverWait(driver, 20).until(
-            EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Next Page')]"))
+            EC.element_to_be_clickable((By.XPATH, "//span[@class='nav-button-page navigation-arrows ng-scope' and @translate='GT_READER_NAVIGATION_NEXT_PAGE' and @role='button']"))
         )
         return next_button.is_enabled()
     except:
         return False
+
 
 def save_all_tabs_as_single_html():
     """ Save all open tabs as a single HTML file using py2web """
@@ -104,6 +112,7 @@ def save_all_tabs_as_single_html():
 
 def main():
     global driver
+    global counter
     driver.set_window_size(1920, 1080)  
     # Step 1: Open the login page
     driver.get('https://account.cengage.com/login')
@@ -125,10 +134,11 @@ def main():
     
     # Step 5: Switch to the ebook tab (the new tab opened)
     driver.switch_to.window(current_window_handles[1])  # Switch to the second tab (ebook)
-    
     while True:
+        global pageNum
+        print("Current Page: ", pageNum)
+        pageNum +=1
         process_page()
-
         if not check_next_page():
             print("No 'Next Page' button found. Stopping.")
             break
