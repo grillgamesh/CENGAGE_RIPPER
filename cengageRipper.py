@@ -11,7 +11,8 @@ from PIL import Image
 import os
 from ebooklib import epub
 from bs4 import BeautifulSoup
-
+import py2web
+global counter
 # Setup Tesseract OCR path if necessary
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'  # Adjust based on your installation
 
@@ -29,16 +30,17 @@ driver = webdriver.Firefox(options=options)
 html_files = []
 counter = 1
 
-def save_frame_as_html(frame, index):
-    """ Save the content of the frame as HTML """
-    html_content = frame.get_attribute('outerHTML')
-    
-    # Create a new HTML file with the given index
-    filename = f"{index:03d}.html"
-    with open(filename, "w", encoding="utf-8") as f:
-        f.write(html_content)
-    
-    html_files.append(filename)
+def collect_page_content():
+    """ Collect the content of all open tabs as HTML """
+    all_html = ""
+    for handle in driver.window_handles:
+        driver.switch_to.window(handle)
+        html_content = driver.page_source  # Get the entire HTML of the current tab
+        all_html += f"<div class='tab-content' id='tab-{counter}'>\n"
+        all_html += html_content
+        all_html += "\n</div>\n"
+        counter += 1
+    return all_html
 
 def find_center_frame():
     """ Find the iframe streaming from the specific URL """
@@ -58,38 +60,45 @@ def find_center_frame():
     return iframe
 
 def process_page():
-    """ Process the current page: locate the frame, save it, and navigate to the next page """
-    global counter
     # Wait for the frame to load before finding it
     WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.TAG_NAME, "iframe")))
-    
+
     # Find the frame in the center of the page
     frame = find_center_frame()
+
+    # Scroll the iframe into view
+    driver.execute_script("arguments[0].scrollIntoView(true);", frame)
+
+    # Find the textLayer div and a clickable child element inside it (e.g., span or p)
+    text_layer = frame.find_element(By.CSS_SELECTOR, ".textLayer")
     
-    # Right-click on the frame to open it in a new tab
+    # Find the first clickable child inside the textLayer (replace this with an actual child element inside the div)
+    clickable_element = text_layer.find_element(By.CSS_SELECTOR, "span.textElement")  # Adjust selector as needed
+
+    # Perform the right-click action on the child element
     actions = ActionChains(driver)
-    actions.context_click(frame).perform()
+    actions.context_click(clickable_element).perform()
     time.sleep(1)
-    
+
     # Find and click the "Open in New Tab" option in the right-click menu
-    driver.find_element(By.CSS_SELECTOR, "your_specific_selector_to_open_in_new_tab").click()
+    driver.find_element(By.CSS_SELECTOR, ".open-in-new-tab").click()  # Replace with actual selector
     time.sleep(2)
-    
+
     # Switch to the new tab
     driver.switch_to.window(driver.window_handles[-1])
-    
+
     # Wait for the page to load before saving the content
     WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.TAG_NAME, "html")))
-    
-    # Save the frame's content as HTML
-    save_frame_as_html(frame, counter)
+
+    # Now we don't save each frame separately, but will collect all open tabs later
     counter += 1
-    
+
     # Close the tab with the frame
     driver.close()
-    
+
     # Switch back to the main window
     driver.switch_to.window(driver.window_handles[0])
+
 
 def check_next_page():
     """ Check if the "next page" button exists and is clickable """
@@ -101,30 +110,16 @@ def check_next_page():
     except:
         return False
 
-def create_epub_from_html_files():
-    """ Create an EPUB from all the saved HTML files """
-    book = epub.EpubBook()
-    book.set_title("Merged HTML Files")
-    book.set_language('en')
+def save_all_tabs_as_single_html():
+    """ Save all open tabs as a single HTML file using py2web """
+    all_html = collect_page_content()
 
-    # Add HTML files to the book
-    for html_file in html_files:
-        with open(html_file, 'r', encoding='utf-8') as f:
-            html_content = f.read()
-        
-        html_item = epub.EpubHtml(title=html_file, file_name=html_file, lang='en')
-        html_item.set_body(html_content)
-        book.add_item(html_item)
-
-    # Define the spine and TOC (table of contents)
-    book.spine = ['nav'] + [epub.EpubHtml(title=f'Page {i+1}', file_name=f'{i+1:03d}.html', lang='en') for i in range(len(html_files))]
-    book.add_item(epub.EpubNav())
-    
-    # Write the EPUB file
-    epub.write_epub('merged_book.epub', book)
+    # Save the combined HTML to a single file using py2web
+    py2web.save_html(all_html, "merged_ebook.html")
 
 def main():
     global driver
+    driver.set_window_size(1920, 1080)  
     # Step 1: Open the login page
     driver.get('https://account.cengage.com/login')
     
@@ -158,7 +153,7 @@ def main():
         next_button.click()
         time.sleep(3)
     
-    create_epub_from_html_files()
+    save_all_tabs_as_single_html()
 
     driver.quit()
 
