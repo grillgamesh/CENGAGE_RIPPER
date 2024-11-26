@@ -12,14 +12,10 @@ from ebooklib import epub
 from bs4 import BeautifulSoup
 import py2web
 global counter
-# Setup Tesseract OCR path if necessary
 
 # Setup the Firefox WebDriver
 options = webdriver.FirefoxOptions()
 options.headless = False  # Set to True if you want the browser to run in headless mode (without UI)
-
-# Optionally, you can add the extension automatically to Firefox from a file if you have the .xpi downloaded
-extension_path = r'path_to_extension.xpi'  # Update with the path to the .xpi file if you have it
 
 # Initialize the driver
 driver = webdriver.Firefox(options=options)
@@ -57,6 +53,11 @@ def find_center_frame():
     
     return iframe
 
+def open_iframe_in_new_tab(iframe):
+    """ Open iframe content in a new tab """
+    iframe_src = iframe.get_attribute('src')
+    driver.execute_script(f"window.open('{iframe_src}');")
+
 def process_page():
     # Wait for the frame to load before finding it
     WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.TAG_NAME, "iframe")))
@@ -64,28 +65,14 @@ def process_page():
     # Find the frame in the center of the page
     frame = find_center_frame()
 
-    # Scroll the iframe into view
-    driver.execute_script("arguments[0].scrollIntoView(true);", frame)
-
-    # Find the textLayer div and a clickable child element inside it (e.g., span or p)
-    text_layer = frame.find_element(By.CSS_SELECTOR, ".textLayer")
+    # Open the iframe in a new tab
+    open_iframe_in_new_tab(frame)
     
-    # Find the first clickable child inside the textLayer (replace this with an actual child element inside the div)
-    clickable_element = text_layer.find_element(By.CSS_SELECTOR, "span.textElement")  # Adjust selector as needed
+    # Wait for the new tab to load
+    time.sleep(3)  # Adjust sleep time if necessary
+    driver.switch_to.window(driver.window_handles[-1])  # Switch to the new tab
 
-    # Perform the right-click action on the child element
-    actions = ActionChains(driver)
-    actions.context_click(clickable_element).perform()
-    time.sleep(1)
-
-    # Find and click the "Open in New Tab" option in the right-click menu
-    driver.find_element(By.CSS_SELECTOR, ".open-in-new-tab").click()  # Replace with actual selector
-    time.sleep(2)
-
-    # Switch to the new tab
-    driver.switch_to.window(driver.window_handles[-1])
-
-    # Wait for the page to load before saving the content
+    # Wait for content to load
     WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.TAG_NAME, "html")))
 
     # Now we don't save each frame separately, but will collect all open tabs later
