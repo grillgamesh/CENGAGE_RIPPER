@@ -38,23 +38,12 @@ def collect_page_content():
         all_html += "\n</div>\n"
         counter += 1  # Increment counter for each new tab
     return all_html
-
-
+    
 def find_center_frame():
     """ Find the iframe streaming from the specific URL """
-    iframe = None
-    # Find all iframe elements on the page
-    iframes = driver.find_elements(By.TAG_NAME, "iframe")
-    
-    for iframe_element in iframes:
-        # Check if the iframe's src contains the streaming URL
-        if "https://ebooks.cenreader.com/v1/reader/stream/" in iframe_element.get_attribute("src"):
-            iframe = iframe_element
-            break
-    
-    if iframe is None:
-        raise Exception("Frame not found with the expected URL pattern.")
-    
+    iframe = driver.find_element(By.CSS_SELECTOR, 'iframe[src^="https://ebooks.cenreader.com/v1/reader/stream/"]')
+    if not iframe:
+        raise ValueError("Frame not found with the expected URL pattern.")
     return iframe
 
 def open_iframe_in_new_tab(iframe):
@@ -117,7 +106,8 @@ def main():
     driver.get('https://account.cengage.com/login')
     
     print("Login page is open. Please log in manually.")
-    URL = input("Paste URL of ebook here")
+    print("Paste URL of ebook here")
+    URL = input()
     
     # Step 2: Open the ebook in a new tab
     print("Opening ebook in a new tab...")
