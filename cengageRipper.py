@@ -1,5 +1,4 @@
 import time
-import pytesseract
 import json
 from selenium import webdriver
 from selenium.webdriver.common.action_chains import ActionChains
