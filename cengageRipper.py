@@ -41,9 +41,19 @@ def collect_page_content():
     
 def find_center_frame():
     """ Find the iframe streaming from the specific URL """
-    iframe = driver.find_element(By.CSS_SELECTOR, 'iframe[src^="https://ebooks.cenreader.com/v1/reader/stream/"]')
-    if not iframe:
-        raise ValueError("Frame not found with the expected URL pattern.")
+    iframe = None
+    # Find all iframe elements on the page
+    iframes = driver.find_elements(By.TAG_NAME, "iframe")
+    
+    for iframe_element in iframes:
+        # Check if the iframe's src contains the streaming URL
+        if "https://ebooks.cenreader.com/v1/reader/stream/" in iframe_element.get_attribute("src"):
+            iframe = iframe_element
+            break
+    
+    if iframe is None:
+        raise Exception("Frame not found with the expected URL pattern.")
+    
     return iframe
 
 def open_iframe_in_new_tab(iframe):
