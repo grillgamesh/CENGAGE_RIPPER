@@ -31,8 +31,8 @@ def log(s, color=None, on_color=None, attrs=None, new_line=True):
     else:
         print(colored(str(s), color, on_color, attrs), end=' ', file=sys.stderr)
     if new_line:
-        sys.stderr.write('\n')
     sys.stderr.flush()
+        sys.stderr.write('\n')
 
 
 def absurl(index, relpath=None, normpath=None):
