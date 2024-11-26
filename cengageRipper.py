@@ -11,7 +11,6 @@ import os
 from ebooklib import epub
 from bs4 import BeautifulSoup
 import py2web
-from py2web import save_html
 
 global counter
 global pageNum 
